@@ -1,7 +1,7 @@
 <html>
 
 <head>
-<title>Vertex Wave</title>
+<title>Vertex Wave - wjw</title>
 <meta charset ="utf-8">
 <meta http-equiv="X-UA-Compatible" content="chrome=1">  <!-- Use Chrome Frame in IE --> 
 </head>
@@ -15,16 +15,25 @@
 
 <script id="vs" type="x-shader/x-vertex">
     attribute vec2 position;
-    
+    uniform float u_time;
     uniform mat4 u_modelViewPerspective;
-    
+    varying vec3 color;
+
     void main(void)
     {
       // NOTE : according to the WebGL standard, 0.0f is not accepted
-		  float height = 0.0;
+		  //float height = 0.0;
+    
+        float s_contrib = sin(position.x*2.0*3.14159 + u_time);
+        float t_contrib = cos(position.y*2.0*3.14159 + u_time);
+        float height = s_contrib*t_contrib;
+
+        vec3 color1 = vec3(.32, 1.0, .75);
+        vec3 color2 = vec3(.95, .35, .25);
+        color = mix(color1, color2, height);
 
       // NOTE : gl_Position is always a vec4
-		  gl_Position = u_modelViewPerspective * vec4(vec3(position, height), 1.0);
+		gl_Position = u_modelViewPerspective * vec4(vec3(position, height), 1.0);
     }
 </script>
 
@@ -32,11 +41,12 @@
     precision mediump float;
 
     uniform vec4 u_color;
+    varying vec3 color;
 
     void main(void)
     {
       // NOTE : gl_FragColor is always a vec4
-		  gl_FragColor = u_color;
+		  gl_FragColor = vec4(color, 1.0);
     }    
 </script>
 
@@ -46,6 +56,8 @@
   var heightLocation = 1;
   var u_modelViewPerspectiveLocation;
   var u_color;
+  var u_timeLocation;
+  var u_time = 0;
   
   var heights;
   var numberOfIndices;
@@ -108,11 +120,15 @@
     var mvp = mat4.create();
     mat4.multiply(persp, mv, mvp);
 
+    //update time
+    u_time = u_time + .015;
+    context.uniform1f(u_timeLocation, u_time);
+
     // Render  
     context.clear(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
-
-    context.uniformMatrix4fv(u_modelViewPerspectiveLocation, false, mvp); 
-    context.drawElements(context.LINES, numberOfIndices, context.UNSIGNED_SHORT,0);
+    context.uniformMatrix4fv(u_modelViewPerspectiveLocation, false, mvp);
+    context.drawElements(context.LINES, numberOfIndices, context.UNSIGNED_SHORT, 0);
+    
 
     window.requestAnimFrame(animate);
   }
@@ -125,7 +141,8 @@
 		var program = createProgram(context, vs, fs, message);
 		context.bindAttribLocation(program, positionLocation, "position");
 		u_modelViewPerspectiveLocation = context.getUniformLocation(program,"u_modelViewPerspective");
-    u_colorLocation = context.getUniformLocation(program, "u_color");
+		u_colorLocation = context.getUniformLocation(program, "u_color");
+		u_timeLocation = context.getUniformLocation(program, "u_time");
 
     context.useProgram(program);
   }
